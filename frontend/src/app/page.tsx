@@ -23,16 +23,16 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/book"
+                href="/rooms"
                 className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 font-semibold text-slate-950 transition hover:bg-amber-300"
               >
-                Reserve a Room <ArrowRight className="h-4 w-4" />
+                View Rooms <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/qr/T1"
+                href="/menu/T1"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-6 py-3 font-medium text-white transition hover:bg-white/20"
               >
-                <QrCode className="h-4 w-4" /> Try QR Ordering
+                <QrCode className="h-4 w-4" /> Order Food
               </Link>
             </div>
           </div>
@@ -127,10 +127,10 @@ export default function Home() {
               </p>
               <div className="mt-6 flex flex-wrap gap-4">
                 <Link
-                  href="/qr/T1"
+                  href="/menu/T1"
                   className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
                 >
-                  <QrCode className="h-4 w-4" /> Scan Table 1 (Demo)
+                  <QrCode className="h-4 w-4" /> Order from Table 1
                 </Link>
                 <Link
                   href="/restaurant"

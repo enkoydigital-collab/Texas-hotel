@@ -29,9 +29,19 @@ export default auth((req) => {
     }
   }
 
+  // ── Protect /dashboard — admin and staff only ────────────────────
+  if (path.startsWith("/dashboard")) {
+    if (!session) {
+      return NextResponse.redirect(new URL("/login", nextUrl));
+    }
+    if (role !== "admin" && role !== "staff") {
+      return NextResponse.redirect(new URL("/unauthorized", nextUrl));
+    }
+  }
+
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/chef/:path*"],
+  matcher: ["/admin/:path*", "/chef/:path*", "/dashboard/:path*"],
 };

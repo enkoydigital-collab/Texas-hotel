@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Briefcase, Hotel, ShieldCheck, Sparkles, UtensilsCrossed, Users } from "lucide-react";
-import { analyticsCards, dashboardRoles, roleContent } from "@/lib/dashboardViews";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import {
+  Briefcase, Hotel, ShieldCheck, Sparkles,
+  UtensilsCrossed, Users, BarChart2, ClipboardList,
+  BedDouble, Wrench,
+} from "lucide-react";
+import { analyticsCards } from "@/lib/dashboardViews";
+import Link from "next/link";
 
-const iconMap = {
+const iconMap: Record<string, React.ElementType> = {
   Reservations: Hotel,
   "Dining Orders": UtensilsCrossed,
   Guests: Users,
@@ -12,16 +19,29 @@ const iconMap = {
 };
 
 export default function DashboardPage() {
-  const [activeRole, setActiveRole] = useState<"admin" | "staff" | "guest">("admin");
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const role = (session?.user as { role?: string })?.role;
+
   const [stats, setStats] = useState<Array<{ title: string; value: string; change: string }>>([]);
   const [analytics, setAnalytics] = useState<Array<{ label: string; value: string; delta: string }>>([]);
 
+  // Redirect if not authorized
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+    if (status === "authenticated" && role !== "admin" && role !== "staff") {
+      router.push("/");
+    }
+  }, [status, role, router]);
+
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/api/dashboard`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStats(data.stats || []);
-        setAnalytics(data.analytics || []);
+      .then((r) => r.json())
+      .then((d) => {
+        setStats(d.stats ?? []);
+        setAnalytics(d.analytics ?? []);
       })
       .catch(() => {
         setStats([
@@ -34,39 +54,53 @@ export default function DashboardPage() {
       });
   }, []);
 
-  const roleData = roleContent[activeRole];
+  // Loading state
+  if (status === "loading" || !role) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Not authorized
+  if (role !== "admin" && role !== "staff") return null;
 
   return (
-    <div className="px-6 py-16 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-10">
-        <div className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-8 shadow-2xl shadow-black/20">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="px-6 py-12 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+
+        {/* Header */}
+        <div className="rounded-[2rem] border border-white/10 bg-slate-900/70 p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-amber-300">Operations Dashboard</p>
-              <h1 className="mt-2 text-4xl font-semibold text-white">Real-time hotel and dining control center.</h1>
-              <p className="mt-4 max-w-2xl text-slate-300">The platform combines reservations, restaurant operations, guest support, and staff coordination into one polished command view.</p>
+              <div className="flex items-center gap-2 text-sm text-amber-300">
+                {role === "admin" ? <ShieldCheck className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
+                <span className="uppercase tracking-widest">
+                  {role === "admin" ? "Admin Dashboard" : "Staff Dashboard"}
+                </span>
+              </div>
+              <h1 className="mt-2 text-3xl font-semibold text-white">
+                Welcome back, {session?.user?.name?.split(" ")[0]}
+              </h1>
+              <p className="mt-2 text-slate-400">
+                {role === "admin"
+                  ? "Full operations overview — manage rooms, dining, payments, and staff."
+                  : "Your daily tasks — housekeeping, guest requests, and service coordination."}
+              </p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
-              <ShieldCheck className="h-4 w-4" /> Secure workspace • role-aware access
-            </div>
+            {session?.user?.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={session.user.image} alt="avatar"
+                className="h-14 w-14 rounded-full border-2 border-amber-400/40 shadow-lg" />
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          {dashboardRoles.map((role) => (
-            <button
-              key={role.id}
-              onClick={() => setActiveRole(role.id)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeRole === role.id ? "bg-amber-400 text-slate-950" : "border border-white/10 bg-slate-900/70 text-slate-200"}`}
-            >
-              {role.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {/* Stats grid */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((card) => {
-            const Icon = iconMap[card.title as keyof typeof iconMap] ?? Sparkles;
+            const Icon = iconMap[card.title] ?? Sparkles;
             return (
               <div key={card.title} className="rounded-[1.5rem] border border-white/10 bg-slate-900/70 p-6">
                 <div className="flex items-center justify-between">
@@ -78,53 +112,107 @@ export default function DashboardPage() {
                     <Icon className="h-5 w-5" />
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-slate-400">{card.change}</p>
+                <p className="mt-3 text-xs text-slate-500">{card.change}</p>
               </div>
             );
           })}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-amber-300">{roleData.title}</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">{dashboardRoles.find((role) => role.id === activeRole)?.summary}</h2>
+        {/* ── ADMIN VIEW ─────────────────────────────────────────── */}
+        {role === "admin" && (
+          <div className="grid gap-6 lg:grid-cols-2">
+
+            {/* Quick actions */}
+            <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <ClipboardList className="h-5 w-5 text-amber-300" /> Quick actions
+              </h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  { href: "/admin/restaurant", label: "Restaurant orders", icon: UtensilsCrossed, color: "text-amber-300" },
+                  { href: "/admin/restaurant?tab=menu", label: "Manage menu", icon: BedDouble, color: "text-blue-300" },
+                  { href: "/admin/restaurant?tab=staff", label: "Approve chefs", icon: Users, color: "text-green-300" },
+                  { href: "/admin/restaurant?tab=analytics", label: "View analytics", icon: BarChart2, color: "text-purple-300" },
+                ].map((action) => (
+                  <Link key={action.href} href={action.href}
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-white/20 hover:bg-slate-800/60">
+                    <action.icon className={`h-5 w-5 ${action.color}`} />
+                    <span className="text-sm font-medium text-white">{action.label}</span>
+                  </Link>
+                ))}
               </div>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {roleData.metrics.map((metric) => (
-                <div key={metric.label} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                  <p className="text-sm text-slate-400">{metric.label}</p>
-                  <p className="mt-2 text-xl font-semibold text-white">{metric.value}</p>
-                </div>
-              ))}
-            </div>
-            <ul className="mt-6 space-y-3 text-sm text-slate-300">
-              {roleData.items.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-amber-300" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
 
-          <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
-            <h2 className="text-xl font-semibold text-white">Analytics charts</h2>
-            <div className="mt-6 space-y-4">
-              {analytics.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                  <div className="flex items-center justify-between">
+            {/* Analytics */}
+            <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <BarChart2 className="h-5 w-5 text-amber-300" /> Key metrics
+              </h2>
+              <div className="mt-4 space-y-3">
+                {analytics.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
                     <p className="text-sm text-slate-400">{item.label}</p>
-                    <span className="text-sm font-medium text-amber-200">{item.delta}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-green-400">{item.delta}</span>
+                      <span className="text-lg font-semibold text-white">{item.value}</span>
+                    </div>
                   </div>
-                  <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
           </div>
-        </div>
+        )}
+
+        {/* ── STAFF VIEW ─────────────────────────────────────────── */}
+        {role === "staff" && (
+          <div className="grid gap-6 lg:grid-cols-2">
+
+            {/* Staff tasks */}
+            <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <Wrench className="h-5 w-5 text-amber-300" /> Today's tasks
+              </h2>
+              <div className="mt-4 space-y-3">
+                {[
+                  { label: "Room 204 – Housekeeping", status: "Pending", color: "text-yellow-300" },
+                  { label: "Room 311 – Towel request", status: "In progress", color: "text-blue-300" },
+                  { label: "Lobby – General cleaning", status: "Done", color: "text-green-400" },
+                  { label: "Room 105 – Maintenance", status: "Pending", color: "text-yellow-300" },
+                ].map((task) => (
+                  <div key={task.label} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
+                    <span className="text-sm text-white">{task.label}</span>
+                    <span className={`text-xs font-medium ${task.color}`}>{task.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Guest requests */}
+            <div className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-6">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <Users className="h-5 w-5 text-amber-300" /> Guest requests
+              </h2>
+              <div className="mt-4 space-y-3">
+                {[
+                  { guest: "Room 412", request: "Extra pillow", time: "10 min ago" },
+                  { guest: "Room 208", request: "Late checkout request", time: "25 min ago" },
+                  { guest: "Room 319", request: "Iron & board", time: "1 hr ago" },
+                ].map((req) => (
+                  <div key={req.guest} className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-white">{req.guest}</span>
+                      <span className="text-xs text-slate-500">{req.time}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-400">{req.request}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   );

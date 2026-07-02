@@ -11,7 +11,6 @@ const publicNav = [
   { href: "/", label: "Home" },
   { href: "/rooms", label: "Rooms" },
   { href: "/restaurant", label: "Restaurant" },
-  { href: "/book", label: "Book" },
 ];
 
 export function SiteHeader() {
@@ -59,6 +58,16 @@ export function SiteHeader() {
           {isAdmin && (
             <>
               <div className="mx-2 h-4 w-px bg-white/10" />
+              <Link
+                href="/dashboard"
+                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  pathname === "/dashboard"
+                    ? "bg-white/10 text-white"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                Dashboard
+              </Link>
               <Link
                 href="/admin/restaurant"
                 className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition ${
@@ -129,10 +138,16 @@ export function SiteHeader() {
                       {session.user?.email}
                     </div>
                     {isAdmin && (
-                      <Link href="/admin/restaurant" onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-amber-300 transition hover:bg-white/5">
-                        <ShieldCheck className="h-4 w-4" /> Admin Panel
-                      </Link>
+                      <>
+                        <Link href="/dashboard" onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5">
+                          Dashboard
+                        </Link>
+                        <Link href="/admin/restaurant" onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-amber-300 transition hover:bg-white/5">
+                          <ShieldCheck className="h-4 w-4" /> Admin Panel
+                        </Link>
+                      </>
                     )}
                     {isChef && (
                       <Link href="/chef" onClick={() => setDropdownOpen(false)}
@@ -195,10 +210,16 @@ export function SiteHeader() {
 
             {/* Role-based links */}
             {isAdmin && (
-              <Link href="/admin/restaurant" onClick={() => setMobileOpen(false)}
-                className="mt-2 flex items-center gap-2 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-300">
-                <ShieldCheck className="h-4 w-4" /> Admin Panel
-              </Link>
+              <>
+                <Link href="/dashboard" onClick={() => setMobileOpen(false)}
+                  className="mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white">
+                  Dashboard
+                </Link>
+                <Link href="/admin/restaurant" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-300">
+                  <ShieldCheck className="h-4 w-4" /> Admin Panel
+                </Link>
+              </>
             )}
             {isChef && (
               <Link href="/chef" onClick={() => setMobileOpen(false)}
