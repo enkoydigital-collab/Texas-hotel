@@ -2,16 +2,27 @@ import express from 'express';
 import cors from 'cors';
 
 const app = express();
-app.use(cors());
+
+// Allow requests from any Vercel deployment and localhost
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    /\.vercel\.app$/,         // any vercel preview URL
+    process.env.FRONTEND_URL, // set this on Render to your custom domain
+  ].filter(Boolean),
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+}));
+
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'globalhotel-backend' });
+  res.json({ status: 'ok', service: 'texas-hotel-backend' });
 });
 
 app.get('/api/overview', (_req, res) => {
   res.json({
-    hotel: 'GlobalHotel',
+    hotel: 'Texas Hotel',
     modules: ['booking', 'qr-dining', 'dashboards', 'payments', 'multilingual'],
   });
 });
@@ -50,6 +61,7 @@ app.get('/api/dashboard', (_req, res) => {
   });
 });
 
-app.listen(4000, '0.0.0.0', () => {
-  console.log('GlobalHotel backend listening on port 4000');
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Texas Hotel backend listening on port ${PORT}`);
 });

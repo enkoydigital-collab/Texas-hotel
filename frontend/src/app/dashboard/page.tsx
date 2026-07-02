@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<Array<{ label: string; value: string; delta: string }>>([]);
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/dashboard")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/api/dashboard`)
       .then((res) => res.json())
       .then((data) => {
         setStats(data.stats || []);
