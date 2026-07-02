@@ -3,13 +3,17 @@ import cors from 'cors';
 
 const app = express();
 
-// Allow requests from any Vercel deployment and localhost
+// Allow localhost + any Vercel deployment
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    /\.vercel\.app$/,         // any vercel preview URL
-    process.env.FRONTEND_URL, // set this on Render to your custom domain
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Allow no-origin requests (Render health checks, curl, etc.)
+    if (!origin) return callback(null, true);
+    const allowed =
+      origin === 'http://localhost:3000' ||
+      origin.endsWith('.vercel.app') ||
+      origin === (process.env.FRONTEND_URL ?? '');
+    callback(null, allowed);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
@@ -36,21 +40,9 @@ app.get('/api/dashboard', (_req, res) => {
       { title: 'Staff Tasks', value: '19', change: '4 high priority' },
     ],
     roles: [
-      {
-        id: 'admin',
-        label: 'Admin view',
-        summary: 'Manage rooms, dining, payments, and occupancy in one place.',
-      },
-      {
-        id: 'staff',
-        label: 'Staff view',
-        summary: 'Coordinate arrivals, housekeeping, and restaurant service.',
-      },
-      {
-        id: 'guest',
-        label: 'Guest view',
-        summary: 'Track bookings, invoices, dining orders, and profile updates.',
-      },
+      { id: 'admin', label: 'Admin view', summary: 'Manage rooms, dining, payments, and occupancy in one place.' },
+      { id: 'staff', label: 'Staff view', summary: 'Coordinate arrivals, housekeeping, and restaurant service.' },
+      { id: 'guest', label: 'Guest view', summary: 'Track bookings, invoices, dining orders, and profile updates.' },
     ],
     analytics: [
       { label: 'Occupancy', value: '92%', delta: '+6%' },
