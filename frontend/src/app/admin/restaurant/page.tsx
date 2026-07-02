@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   Sparkles,
   XCircle,
+  Users,
+  LogOut,
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { orderStore } from "@/lib/orderStore";
 import {
   menuData as initialMenu,
@@ -26,7 +29,7 @@ import {
   ORDER_STATUS_COLORS,
 } from "@/lib/restaurantData";
 
-type AdminTab = "orders" | "menu" | "analytics";
+type AdminTab = "orders" | "menu" | "analytics" | "staff";
 
 const STATUS_ACTIONS: Partial<Record<OrderStatus, { next: OrderStatus; label: string }>> = {
   pending: { next: "confirmed", label: "Confirm order" },
@@ -45,12 +48,14 @@ const STATUS_ICON: Record<OrderStatus, React.ReactNode> = {
 };
 
 export default function AdminRestaurantPage() {
+  const { data: session } = useSession();
   const [tab, setTab] = useState<AdminTab>("orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenu);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "all">("all");
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [tick, setTick] = useState(0);
+  const [chefs, setChefs] = useState<{ email: string; status: string }[]>([]);
 
   // Subscribe to order store
   useEffect(() => {
@@ -66,6 +71,30 @@ export default function AdminRestaurantPage() {
     const interval = setInterval(() => setTick((t) => t + 1), 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Load chef approvals when on staff tab
+  useEffect(() => {
+    if (tab === "staff") {
+      fetch("/api/chef-approvals")
+        .then((r) => r.json())
+        .then((d) => setChefs(d.chefs ?? []));
+    }
+  }, [tab, tick]);
+
+  async function handleChefAction(email: string, action: "approve" | "reject") {
+    await fetch("/api/chef-approvals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, action }),
+    });
+    setChefs((prev) =>
+      prev.map((c) =>
+        c.email === email
+          ? { ...c, status: action === "approve" ? "approved" : "rejected" }
+          : c
+      )
+    );
+  }
 
   const visibleOrders = filterStatus === "all"
     ? orders
@@ -113,9 +142,21 @@ export default function AdminRestaurantPage() {
               Manage orders, menu items, and view analytics.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <RefreshCcw className="h-3.5 w-3.5" />
-            Auto-refreshes every 5s
+          <div className="flex items-center gap-3">
+            {session?.user?.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={session.user.image} alt="avatar" className="h-9 w-9 rounded-full border border-white/10" />
+            )}
+            <div className="text-right text-sm hidden sm:block">
+              <p className="font-medium text-white">{session?.user?.name}</p>
+              <p className="text-xs text-amber-300">Administrator</p>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-xs text-slate-400 transition hover:text-white"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sign out
+            </button>
           </div>
         </div>
 
@@ -136,7 +177,7 @@ export default function AdminRestaurantPage() {
 
         {/* Tab switcher */}
         <div className="flex gap-2">
-          {(["orders", "menu", "analytics"] as AdminTab[]).map((t) => (
+          {(["orders", "menu", "analytics", "staff"] as AdminTab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -146,7 +187,9 @@ export default function AdminRestaurantPage() {
                   : "border border-white/10 bg-slate-900/70 text-slate-300 hover:border-white/30"
               }`}
             >
-              {t}
+              {t === "staff" ? (
+                <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Staff</span>
+              ) : t}
             </button>
           ))}
         </div>
@@ -380,6 +423,65 @@ export default function AdminRestaurantPage() {
             </div>
           </div>
         )}
+
+        {/* ── STAFF TAB ─────────────────────────────────────────── */}
+        {tab === "staff" && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400">
+              Chefs who signed in with Google are listed here. Approve them to grant kitchen access.
+            </p>
+            {chefs.length === 0 ? (
+              <div className="flex h-40 items-center justify-center rounded-2xl border border-white/10 bg-slate-900/40 text-slate-500">
+                No chef sign-ins yet
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {chefs.map((chef) => (
+                  <div key={chef.email} className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-slate-800 text-sm font-bold text-white uppercase">
+                        {chef.email[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-medium text-white">{chef.email}</p>
+                        <span className={`text-xs font-medium capitalize ${
+                          chef.status === "approved" ? "text-green-400" :
+                          chef.status === "rejected" ? "text-red-400" :
+                          "text-yellow-300"
+                        }`}>● {chef.status}</span>
+                      </div>
+                    </div>
+                    {chef.status === "pending" && (
+                      <div className="mt-4 flex gap-2">
+                        <button onClick={() => handleChefAction(chef.email, "approve")}
+                          className="flex-1 rounded-full bg-green-500 py-2 text-xs font-semibold text-white transition hover:bg-green-400">
+                          Approve
+                        </button>
+                        <button onClick={() => handleChefAction(chef.email, "reject")}
+                          className="flex-1 rounded-full border border-red-500/30 bg-red-500/10 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20">
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                    {chef.status === "approved" && (
+                      <button onClick={() => handleChefAction(chef.email, "reject")}
+                        className="mt-4 w-full rounded-full border border-red-500/30 bg-red-500/10 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20">
+                        Revoke access
+                      </button>
+                    )}
+                    {chef.status === "rejected" && (
+                      <button onClick={() => handleChefAction(chef.email, "approve")}
+                        className="mt-4 w-full rounded-full bg-green-500 py-2 text-xs font-semibold text-white transition hover:bg-green-400">
+                        Re-approve
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

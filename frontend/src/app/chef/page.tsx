@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import {
   ChefHat,
   Flame,
@@ -8,6 +9,7 @@ import {
   Clock,
   ReceiptText,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { orderStore } from "@/lib/orderStore";
 import { type Order, ORDER_STATUS_COLORS } from "@/lib/restaurantData";
@@ -15,6 +17,7 @@ import { type Order, ORDER_STATUS_COLORS } from "@/lib/restaurantData";
 type KitchenTab = "queue" | "completed";
 
 export default function ChefPage() {
+  const { data: session } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [tab, setTab] = useState<KitchenTab>("queue");
 
@@ -26,11 +29,9 @@ export default function ChefPage() {
     return () => { unsub(); };
   }, []);
 
-  // Chef only sees orders that are "confirmed" or "preparing"
   const queue = orders.filter(
     (o) => o.status === "confirmed" || o.status === "preparing"
   );
-  // Completed = ready or served
   const completed = orders.filter(
     (o) => o.status === "ready" || o.status === "served"
   );
@@ -46,6 +47,7 @@ export default function ChefPage() {
   return (
     <div className="px-4 py-10 lg:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
+
         {/* Header */}
         <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -57,14 +59,35 @@ export default function ChefPage() {
               Receive assigned orders, update preparation status, and notify when ready.
             </p>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="rounded-2xl border border-orange-400/30 bg-orange-400/10 px-4 py-2 text-center">
-              <p className="text-xs text-slate-400">In queue</p>
-              <p className="text-xl font-semibold text-orange-300">{queue.length}</p>
+          <div className="flex items-center gap-4">
+            {/* Queue / completed counts */}
+            <div className="flex items-center gap-3 text-sm">
+              <div className="rounded-2xl border border-orange-400/30 bg-orange-400/10 px-4 py-2 text-center">
+                <p className="text-xs text-slate-400">In queue</p>
+                <p className="text-xl font-semibold text-orange-300">{queue.length}</p>
+              </div>
+              <div className="rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-center">
+                <p className="text-xs text-slate-400">Completed</p>
+                <p className="text-xl font-semibold text-green-300">{completed.length}</p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-green-400/30 bg-green-400/10 px-4 py-2 text-center">
-              <p className="text-xs text-slate-400">Completed</p>
-              <p className="text-xl font-semibold text-green-300">{completed.length}</p>
+            {/* User info + sign out */}
+            <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+              {session?.user?.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt="avatar" className="h-8 w-8 rounded-full border border-white/10" />
+              )}
+              <div className="hidden sm:block text-right">
+                <p className="text-xs font-medium text-white leading-none">{session?.user?.name}</p>
+                <p className="text-xs text-amber-300">Chef</p>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="ml-1 flex items-center gap-1 rounded-full border border-white/10 p-2 text-slate-400 transition hover:text-white"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -120,32 +143,23 @@ export default function ChefPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {completed.map((order) => (
-                  <div
-                    key={order.id}
-                    className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 opacity-75"
-                  >
+                  <div key={order.id} className="rounded-[1.75rem] border border-white/10 bg-slate-900/70 p-5 opacity-75">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="font-mono text-sm font-semibold text-white">{order.id}</p>
                         <p className="text-xs text-slate-400">Table {order.tableId}</p>
                       </div>
-                      <span
-                        className={`flex items-center gap-1 rounded-full border border-white/10 bg-slate-800/60 px-3 py-1 text-xs font-medium capitalize ${ORDER_STATUS_COLORS[order.status]}`}
-                      >
+                      <span className={`flex items-center gap-1 rounded-full border border-white/10 bg-slate-800/60 px-3 py-1 text-xs font-medium capitalize ${ORDER_STATUS_COLORS[order.status]}`}>
                         <CheckCircle2 className="h-3 w-3" />
                         {order.status}
                       </span>
                     </div>
                     <ul className="mt-3 space-y-1 text-sm text-slate-300">
                       {order.items.map(({ menuItem, quantity }) => (
-                        <li key={menuItem.id}>
-                          {menuItem.name} × {quantity}
-                        </li>
+                        <li key={menuItem.id}>{menuItem.name} × {quantity}</li>
                       ))}
                     </ul>
-                    <p className="mt-3 text-right text-sm font-semibold text-amber-200">
-                      ${order.total}
-                    </p>
+                    <p className="mt-3 text-right text-sm font-semibold text-amber-200">${order.total}</p>
                   </div>
                 ))}
               </div>
@@ -171,68 +185,49 @@ function KitchenOrderCard({
   const isPreparing = order.status === "preparing";
 
   return (
-    <div
-      className={`rounded-[1.75rem] border p-5 transition ${
-        isPreparing
-          ? "border-orange-400/40 bg-orange-400/5 shadow-lg shadow-orange-400/10"
-          : "border-blue-400/30 bg-slate-900/70"
-      }`}
-    >
-      {/* Header */}
+    <div className={`rounded-[1.75rem] border p-5 transition ${
+      isPreparing
+        ? "border-orange-400/40 bg-orange-400/5 shadow-lg shadow-orange-400/10"
+        : "border-blue-400/30 bg-slate-900/70"
+    }`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-sm font-semibold text-white">{order.id}</p>
           <p className="text-xs text-slate-400">Table {order.tableId}</p>
         </div>
-        <span
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize ${
-            isPreparing
-              ? "border-orange-400/40 bg-orange-400/10 text-orange-300"
-              : "border-blue-400/30 bg-blue-400/10 text-blue-300"
-          }`}
-        >
+        <span className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize ${
+          isPreparing
+            ? "border-orange-400/40 bg-orange-400/10 text-orange-300"
+            : "border-blue-400/30 bg-blue-400/10 text-blue-300"
+        }`}>
           {isPreparing ? <Flame className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
           {isPreparing ? "Preparing" : "Confirmed"}
         </span>
       </div>
 
-      {/* Items list */}
       <div className="mt-4 space-y-2">
         {order.items.map(({ menuItem, quantity }) => (
-          <div
-            key={menuItem.id}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-sm"
-          >
+          <div key={menuItem.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-sm">
             <span className="text-white">{menuItem.name}</span>
-            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-semibold text-amber-300">
-              ×{quantity}
-            </span>
+            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-semibold text-amber-300">×{quantity}</span>
           </div>
         ))}
       </div>
 
-      {/* Actions */}
       <div className="mt-4 flex gap-2">
         {!isPreparing ? (
-          <button
-            onClick={onStartPreparing}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-500 py-2.5 text-sm font-medium text-white transition hover:bg-orange-400 active:scale-[.98]"
-          >
-            <Flame className="h-4 w-4" />
-            Start preparing
+          <button onClick={onStartPreparing}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-500 py-2.5 text-sm font-medium text-white transition hover:bg-orange-400 active:scale-[.98]">
+            <Flame className="h-4 w-4" /> Start preparing
           </button>
         ) : (
-          <button
-            onClick={onMarkReady}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-green-500 py-2.5 text-sm font-medium text-white transition hover:bg-green-400 active:scale-[.98]"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Mark as ready
+          <button onClick={onMarkReady}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-green-500 py-2.5 text-sm font-medium text-white transition hover:bg-green-400 active:scale-[.98]">
+            <CheckCircle2 className="h-4 w-4" /> Mark as ready
           </button>
         )}
       </div>
 
-      {/* Time info */}
       <p className="mt-3 text-right text-xs text-slate-500">
         <ReceiptText className="mr-1 inline h-3 w-3" />
         {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
