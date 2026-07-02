@@ -19,13 +19,6 @@ const footerLinks = [
     ],
   },
   {
-    heading: "Staff",
-    links: [
-      { href: "/admin/restaurant", label: "Admin Panel" },
-      { href: "/chef", label: "Chef Kitchen" },
-    ],
-  },
-  {
     heading: "Info",
     links: [
       { href: "/contact", label: "Contact" },
