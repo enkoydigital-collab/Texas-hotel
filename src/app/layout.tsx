@@ -8,8 +8,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Texas-hotel | Luxury Hospitality Platform",
-  description: "Texas-hotel blends premium stays, QR dining, reservations, dashboards, and modern hospitality services.",
+  title: "Texas Hotel | Luxury Hospitality & QR Dining",
+  description:
+    "Texas Hotel — premium stays, contactless QR dining, real-time order tracking, and modern hospitality all in one place.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

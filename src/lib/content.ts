@@ -108,14 +108,14 @@ export const testimonials = [
 export const features = [
   {
     title: "Luxury Stays",
-    text: "Design-led suites with panoramic skyline views and bespoke service.",
+    text: "Design-led suites with panoramic skyline views and bespoke service at Texas Hotel.",
   },
   {
-    title: "Smart Dining",
-    text: "Scan the room QR code and order room service or restaurant meals in seconds.",
+    title: "Smart QR Dining",
+    text: "Scan your table QR code, browse the full menu, place orders, and pay — all from your phone.",
   },
   {
     title: "Texas Hospitality",
-    text: "Multilingual support, international payment methods, and concierge everywhere.",
+    text: "Warm service, international payment options, and real-time order tracking at every table.",
   },
 ];

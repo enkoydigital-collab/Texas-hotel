@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* ── Texas Hotel design tokens ── */
 :root {
   color-scheme: dark;
   --background: #020617;
@@ -17,13 +18,21 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(251, 191, 36, 0.2), transparent 24%),
-    linear-gradient(135deg, #020617 0%, #0f172a 60%, #111827 100%);
+    radial-gradient(ellipse at top left, rgba(251, 191, 36, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(251, 191, 36, 0.08) 0%, transparent 50%),
+    linear-gradient(160deg, #020617 0%, #0f172a 55%, #111827 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter, Arial, Helvetica, sans-serif);
 }
 
 ::selection {
   background: rgba(251, 191, 36, 0.35);
   color: white;
+}
+
+/* Smooth page transitions */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
